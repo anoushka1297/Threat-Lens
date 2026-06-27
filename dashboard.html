@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ThreatLens</title>
+<style>
+  :root {
+    --bg:#0f1115; --card:#1a1d24; --text:#e8e8e8; --muted:#9aa0aa;
+    --danger:#e24b4a; --ok:#1d9e75; --border:#2a2e37;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  header h1 { font-size:18px; font-weight:500; margin:0; }
+  .conn { font-size:13px; color:var(--muted); }
+  .conn.live::before { content:"\25CF"; color:var(--ok); margin-right:5px; }
+  .conn.dead::before { content:"\25CF"; color:var(--danger); margin-right:5px; }
+  .banner { margin:16px 24px; padding:20px; border-radius:12px; text-align:center; font-size:22px; font-weight:600; letter-spacing:0.5px; }
+  .banner.ok { background:rgba(29,158,117,0.15); color:var(--ok); border:1px solid rgba(29,158,117,0.4); }
+  .banner.danger { background:rgba(226,75,74,0.18); color:var(--danger); border:1px solid rgba(226,75,74,0.5); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:0.55; } }
+  .grid { display:grid; grid-template-columns: 2fr 1fr; gap:16px; padding:0 24px 24px; }
+  @media (max-width:800px){ .grid{ grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .card h2 { font-size:13px; font-weight:500; color:var(--muted); margin:0 0 12px; text-transform:uppercase; letter-spacing:0.5px; }
+  .controls { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+  .btn { background:#252932; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:5px 11px; font-size:13px; cursor:pointer; }
+  .btn:hover:not(:disabled) { border-color:#3a3f4a; }
+  .btn:disabled { opacity:0.35; cursor:default; }
+  .btn.live-on { background:rgba(29,158,117,0.15); color:var(--ok); border-color:rgba(29,158,117,0.4); }
+  .viewlabel { font-size:13px; color:var(--muted); margin-left:auto; }
+  .viewlabel .past { color:#e0b34a; }
+  #liveCanvas { width:100%; border-radius:8px; background:#000; display:none; }
+  .empty { color:var(--muted); font-size:14px; padding:40px 0; text-align:center; }
+  .event { display:flex; gap:10px; padding:8px; border-bottom:1px solid var(--border); align-items:center; cursor:pointer; border-radius:6px; }
+  .event:last-child { border-bottom:none; }
+  .event:hover { background:rgba(255,255,255,0.03); }
+  .event.selected { background:rgba(255,255,255,0.06); }
+  .event img { width:56px; height:42px; object-fit:cover; border-radius:6px; background:#000; flex-shrink:0; }
+  .event .meta { flex:1; min-width:0; }
+  .event .time { font-size:12px; color:var(--muted); }
+  .event .labels { font-size:13px; margin-top:2px; }
+  .tag { display:inline-block; padding:1px 7px; border-radius:4px; font-size:12px; margin:2px 4px 0 0; }
+  .tag.weapon { background:rgba(226,75,74,0.2); color:#f5a3a2; }
+  .tag.other { background:rgba(154,160,170,0.15); color:var(--muted); }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .dot.danger { background:var(--danger); }
+  .dot.ok { background:var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>ThreatLens</h1>
+  <span class="conn" id="conn">connecting...</span>
+</header>
+
+<div class="banner ok" id="banner">All clear</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Capture</h2>
+    <div class="controls">
+      <button class="btn" id="prevBtn" onclick="step(1)">&larr; Older</button>
+      <button class="btn" id="nextBtn" onclick="step(-1)">Newer &rarr;</button>
+      <button class="btn live-on" id="liveBtn" onclick="goLive()">Live</button>
+      <span class="viewlabel" id="viewLabel"></span>
+    </div>
+    <canvas id="liveCanvas"></canvas>
+    <div class="empty" id="liveEmpty">Waiting for first image...</div>
+  </div>
+  <div class="card">
+    <h2>Recent events</h2>
+    <div id="eventList"><div class="empty">No captures yet</div></div>
+  </div>
+</div>
+
+<script>
+const WEAPON = new Set(["guns","gun","knife","rifle","pistol"]);
+
+const LOCATION = "Main Entrance — Block 2";  
+const canvas = document.getElementById('liveCanvas');
+const ctx = canvas.getContext('2d');
+
+let allEvents = [];      // newest first, from the server
+let viewedId = null;     // which capture is shown in the canvas
+let following = true;    // true = always show newest
+let lastDrawnId = null;  // avoid redrawing the same image
+
+async function poll() {
+  const conn = document.getElementById('conn');
+  try {
+    const res = await fetch('/api/events');
+    allEvents = await res.json();
+    conn.textContent = 'connected';
+    conn.className = 'conn live';
+    render();
+  } catch (e) {
+    conn.textContent = 'server offline';
+    conn.className = 'conn dead';
+  }
+}
+
+function currentIndex() {
+  return allEvents.findIndex(e => e.id === viewedId);
+}
+
+function render() {
+  const banner = document.getElementById('banner');
+
+  if (allEvents.length === 0) {
+    banner.className = 'banner ok';
+    banner.textContent = 'All clear';
+    setNavDisabled(true);
+    return;
+  }
+
+  // Decide which event to show.
+  let idx = currentIndex();
+  if (following || idx === -1) {
+    viewedId = allEvents[0].id;
+    idx = 0;
+  }
+  const ev = allEvents[idx];
+
+  // Banner reflects the capture you are looking at.
+  if (ev.danger) {
+    banner.className = 'banner danger';
+    banner.textContent = 'DANGER DETECTED';
+  } else {
+    banner.className = 'banner ok';
+    banner.textContent = 'All clear';
+  }
+
+  if (ev.id !== lastDrawnId) {
+    lastDrawnId = ev.id;
+    drawEvent(ev);
+  }
+
+  updateControls(idx, ev);
+  renderList();
+}
+
+function updateControls(idx, ev) {
+  const isLatest = idx === 0;
+  // Older = higher index, Newer = lower index
+  document.getElementById('prevBtn').disabled = idx >= allEvents.length - 1;
+  document.getElementById('nextBtn').disabled = idx <= 0;
+
+  const liveBtn = document.getElementById('liveBtn');
+  liveBtn.classList.toggle('live-on', following && isLatest);
+
+const label = document.getElementById('viewLabel');
+  const today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  if (following && isLatest) {
+    label.innerHTML = `<span class="dot ${ev.danger ? 'danger' : 'ok'}"></span>live &middot; ${LOCATION} &middot; ${today} &middot; ${ev.time}`;
+  } else {
+    const pos = `${idx + 1} of ${allEvents.length}`;
+    label.innerHTML = `<span class="past">past capture</span> &middot; ${LOCATION} &middot; ${today} &middot; ${ev.time} &middot; ${pos}`;
+  }
+}
+
+function setNavDisabled(state) {
+  document.getElementById('prevBtn').disabled = state;
+  document.getElementById('nextBtn').disabled = state;
+}
+
+function renderList() {
+  const list = document.getElementById('eventList');
+  list.innerHTML = '';
+  for (const ev of allEvents) {
+    const tags = ev.detections.map(d => {
+      const cls = WEAPON.has(d.label.toLowerCase()) ? 'weapon' : 'other';
+      return `<span class="tag ${cls}">${d.label} ${Math.round(d.confidence*100)}%</span>`;
+    }).join('') || '<span class="time">nothing detected</span>';
+
+    const row = document.createElement('div');
+    row.className = 'event' + (ev.id === viewedId ? ' selected' : '');
+    row.onclick = () => selectEvent(ev.id);
+    row.innerHTML =
+      `<img src="${ev.image_url}" alt="">` +
+      `<div class="meta"><div class="time">${ev.time}</div>` +
+      `<div class="labels">${tags}</div></div>`;
+    list.appendChild(row);
+  }
+}
+
+function selectEvent(id) {
+  viewedId = id;
+  following = false;
+  render();
+}
+
+function step(delta) {
+  const idx = currentIndex();
+  if (idx === -1) return;
+  const next = idx + delta;
+  if (next < 0 || next >= allEvents.length) return;
+  viewedId = allEvents[next].id;
+  following = false;
+  render();
+}
+
+function goLive() {
+  following = true;
+  if (allEvents.length) viewedId = allEvents[0].id;
+  render();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') step(-1);   // newer
+  if (e.key === 'ArrowRight') step(1);    // older
+  if (e.key === 'l' || e.key === 'L') goLive();
+});
+
+function drawEvent(ev) {
+  document.getElementById('liveEmpty').style.display = 'none';
+  canvas.style.display = 'block';
+
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    ctx.drawImage(img, 0, 0);
+
+    const scale = img.naturalWidth / 600;
+    ctx.lineWidth = Math.max(2, 3 * scale);
+    ctx.font = `${Math.max(14, 16 * scale)}px sans-serif`;
+
+    for (const d of ev.detections) {
+      const weapon = WEAPON.has(d.label.toLowerCase());
+      const color = weapon ? '#e24b4a' : '#1d9e75';
+      const w = d.x_max - d.x_min, h = d.y_max - d.y_min;
+
+      ctx.strokeStyle = color;
+      ctx.strokeRect(d.x_min, d.y_min, w, h);
+
+      const label = `${d.label} ${Math.round(d.confidence*100)}%`;
+      const padY = 22 * scale;
+      const tw = ctx.measureText(label).width;
+      ctx.fillStyle = color;
+      ctx.fillRect(d.x_min, d.y_min - padY, tw + 10, padY);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, d.x_min + 5, d.y_min - 6 * scale);
+    }
+  };
+  img.src = ev.image_url + '?t=' + Date.now();
+}
+
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>

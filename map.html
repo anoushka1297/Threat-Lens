@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THREAT LENS - Authority View</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+<style>
+  html, body { margin:0; height:100%; background:#0f1115; font-family: system-ui, -apple-system, sans-serif; color:#e8e8e8; }
+  #map { position:absolute; inset:0; z-index:1; background:#0f1115; }
+  .topbar { position:absolute; top:0; left:0; right:0; z-index:1000; display:flex; align-items:center; justify-content:space-between;
+            padding:12px 20px; background:rgba(15,17,21,0.92); border-bottom:1px solid #2a2e37; }
+  .title { font-size:18px; font-weight:600; letter-spacing:1px; }
+  .title .sub { font-size:12px; color:#9aa0aa; font-weight:400; letter-spacing:0; margin-left:8px; }
+  .status { font-size:13px; color:#9aa0aa; }
+  .status .hot { color:#f5a3a2; font-weight:600; }
+  .alerts { position:absolute; top:64px; right:16px; z-index:1000; width:280px; max-height:calc(100% - 84px); overflow:auto; }
+  .alert-card { background:rgba(26,29,36,0.96); border:1px solid #e24b4a; border-radius:10px; padding:12px; margin-bottom:10px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; letter-spacing:0.5px;
+          background:rgba(226,75,74,0.2); color:#f5a3a2; }
+  .alert-card .addr { font-weight:500; margin-top:8px; }
+  .alert-card .meta { font-size:12px; color:#9aa0aa; margin-top:2px; }
+  .alert-card img { width:100%; border-radius:6px; margin-top:8px; display:block; }
+  .site-marker { width:16px; height:16px; border-radius:50%; background:#1d9e75; border:2px solid #fff; box-sizing:border-box; }
+  .site-marker.alert { background:#e24b4a; animation: pulse 1.2s infinite; }
+  @keyframes pulse {
+    0%   { box-shadow:0 0 0 0 rgba(226,75,74,0.7); }
+    70%  { box-shadow:0 0 0 16px rgba(226,75,74,0); }
+    100% { box-shadow:0 0 0 0 rgba(226,75,74,0); }
+  }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:#1a1d24; color:#e8e8e8; }
+  .leaflet-popup-content { font-size:13px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="title">THREAT LENS <span class="sub">authority view</span></div>
+  <div class="status"><span id="count">no active alerts</span> &middot; <span id="conn">connecting...</span></div>
+</div>
+
+<div id="map"></div>
+<div class="alerts" id="alerts"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const map = L.map('map', { zoomControl: true }).setView([1.4039, 103.9107], 16);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  subdomains: 'abcd',
+  maxZoom: 20
+}).addTo(map);
+
+const markers = {};
+let centered = false;
+
+function buildIcon(active) {
+  return L.divIcon({
+    className: '',
+    html: `<div class="site-marker ${active ? 'alert' : ''}"></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  });
+}
+
+async function poll() {
+  const conn = document.getElementById('conn');
+  let sites;
+  try {
+    const res = await fetch('/api/map');
+    sites = await res.json();
+    conn.textContent = 'connected';
+  } catch (e) {
+    conn.textContent = 'server offline';
+    return;
+  }
+  update(sites);
+}
+
+function update(sites) {
+  const bounds = [];
+  let activeCount = 0;
+
+  for (const s of sites) {
+    bounds.push([s.lat, s.lng]);
+
+    if (!markers[s.site_id]) {
+      markers[s.site_id] = L.marker([s.lat, s.lng], { icon: buildIcon(s.active) }).addTo(map);
+    }
+    markers[s.site_id].setIcon(buildIcon(s.active));
+
+    let popup = `<b>${s.name}</b><br>${s.address}`;
+    if (s.active) {
+      popup += `<br><span style="color:#f5a3a2">Weapon detected ${s.last_time}</span>`;
+      activeCount++;
+    }
+    markers[s.site_id].bindPopup(popup);
+  }
+
+  if (!centered && bounds.length) {
+    map.fitBounds(bounds, { padding: [90, 90], maxZoom: 17 });
+    centered = true;
+  }
+
+  renderAlerts(sites, activeCount);
+}
+
+function renderAlerts(sites, activeCount) {
+  const countEl = document.getElementById('count');
+  countEl.innerHTML = activeCount
+    ? `<span class="hot">${activeCount} active alert${activeCount > 1 ? 's' : ''}</span>`
+    : 'no active alerts';
+
+  const hot = sites.filter(s => s.active);
+  const el = document.getElementById('alerts');
+  el.innerHTML = hot.map(s => `
+    <div class="alert-card">
+      <span class="pill">WEAPON DETECTED</span>
+      <div class="addr">${s.name}</div>
+      <div class="meta">${s.address}</div>
+      <div class="meta">last seen ${s.last_time}</div>
+      ${s.last_image ? `<img src="${s.last_image}" alt="">` : ''}
+    </div>`).join('');
+}
+
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
