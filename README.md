@@ -4,9 +4,9 @@
 
 Every camera becomes a first responder. ThreatLens turns standard security cameras into autonomous early warning endpoints — detecting weapons across multiple AI models, validating threats, and broadcasting alerts to civilians and authorities in seconds.
 
-> Built at ['Sup Build 2026](https://supbuild.com) — 12 hours, 3 builders, 1 camera, 3 AI models.
+> Built at ['Sup Build 2026](https://supbuild.com) \
+> Received Top 10 Finalist
 
-🌐 **[Live Website](https://yourusername.github.io/your-repo-name/)** · 📹 **[Demo Video](YOUR_VIDEO_LINK)** · 📊 **[Slide Deck](YOUR_SLIDES_LINK)**
 
 ---
 
@@ -186,6 +186,37 @@ python feed_demo.py
 
 ---
 
+## Demo pictures 
+
+### ESP32 (OV3660 camera module)
+
+<img width="1500" height="2000" alt="WhatsApp Image 2026-06-27 at 13 17 36" src="https://github.com/user-attachments/assets/c94b5a7c-1ab3-4abd-93b3-3d62cba5533b" />
+
+### Custom 3d-printed casing 
+<img width="1468" height="815" alt="Screenshot 2026-07-29 at 6 44 36 PM" src="https://github.com/user-attachments/assets/40c287da-29e8-4420-9636-5694157363d0" />
+
+<img width="967" height="618" alt="Screenshot 2026-07-29 at 6 44 46 PM" src="https://github.com/user-attachments/assets/f2611ce7-349c-4ce4-a413-4c4003e40387" />
+
+### Dashboard with live image detection
+
+<img width="2938" height="1686" alt="WhatsApp Image 2026-06-27 at 14 29 56" src="https://github.com/user-attachments/assets/331aca27-988d-4450-baf3-77721e2f194b" />
+
+### Telegram alert 
+
+#### Live stream
+<img width="715" height="747" alt="Screenshot 2026-07-29 at 6 38 44 PM" src="https://github.com/user-attachments/assets/98ccc66c-9cad-44fc-9478-2c5820a52f1b" />
+
+#### Sample image
+
+<img width="738" height="1600" alt="WhatsApp Image 2026-06-27 at 14 34 29" src="https://github.com/user-attachments/assets/ed393140-1695-43a3-9a18-225e1abe9c66" />
+
+#### Control image 
+
+<img width="1468" height="825" alt="Screenshot 2026-07-29 at 6 45 18 PM" src="https://github.com/user-attachments/assets/df8b1356-0da8-46c4-9c60-fd2799b54509" />
+
+### Geolocation dashboard
+<img width="1470" height="842" alt="Screenshot 2026-07-29 at 6 45 49 PM" src="https://github.com/user-attachments/assets/582f98f1-15bd-48c5-a3f8-311d0c45e5d9" />
+
 ## Privacy
 
 - No facial recognition or biometric data collection
@@ -210,16 +241,11 @@ python feed_demo.py
 
 | Member | Role |
 |---|---|
-| Member 1 | Detection pipeline, CLIP integration, system architecture |
-| Member 2 | ESP32 firmware, YOLO training, hardware integration |
-| Member 3 | Telegram alerts, LLM integration, dashboard |
+| Aryaan | Detection pipeline, CLIP integration, system architecture |
+| Anoushka | ESP32 firmware, YOLO training, hardware integration |
+| Dhruv | Telegram alerts, LLM integration, dashboard |
 
 ---
 
-## License
 
-MIT
 
----
-
-*Built with urgency. Because seconds matter.*
