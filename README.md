@@ -2,10 +2,14 @@
 
 **Real-time weapon detection and public safety alerting system.**
 
-Every camera becomes a first responder. ThreatLens turns standard security cameras into autonomous early warning endpoints — detecting weapons across multiple AI models, validating threats, and broadcasting alerts to civilians and authorities in seconds.
+Every camera becomes a first responder. ThreatLens turns standard security cameras into autonomous early warning endpoints by detecting weapons across multiple AI models, validating threats, and broadcasting alerts to civilians and authorities in seconds.
 
-> Built at ['Sup Build 2026](https://supbuild.com) \
+> Built at ['Sup Build 2026](https://luma.com/zda76sc1) \
 > Received Top 10 Finalist
+
+ *[Live Website](https://anoushka1297.github.io/website/)* ·  *[Official demo video](https://drive.google.com/file/d/1SZbYOqunfNbkYzko3F5Ft0Qs7u9KkGgG/view?usp=sharing)* · 
+
+
 
 
 ---
@@ -164,6 +168,12 @@ python feed_demo.py
 
 ---
 
+## Rapid Prototype Review Video
+
+
+https://github.com/user-attachments/assets/296b354e-9386-4346-baab-abf12ee76966
+
+
 ## Architecture Decisions
 
 | Decision | Why |
@@ -186,7 +196,7 @@ python feed_demo.py
 
 ---
 
-## Demo pictures 
+## Demo Pictures 
 
 ### ESP32 (OV3660 camera module)
 
