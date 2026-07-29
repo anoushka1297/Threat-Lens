@@ -213,10 +213,10 @@ https://github.com/user-attachments/assets/296b354e-9386-4346-baab-abf12ee76966
 
 ### Telegram alert 
 
-#### Live stream
+#### Live ESP32 cam
 <img width="715" height="747" alt="Screenshot 2026-07-29 at 6 38 44 PM" src="https://github.com/user-attachments/assets/98ccc66c-9cad-44fc-9478-2c5820a52f1b" />
 
-#### Sample image
+#### Hardcoded image (feed_demo.py)
 
 <img width="738" height="1600" alt="WhatsApp Image 2026-06-27 at 14 34 29" src="https://github.com/user-attachments/assets/ed393140-1695-43a3-9a18-225e1abe9c66" />
 
